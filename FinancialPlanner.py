@@ -1,30 +1,5 @@
 import sys
 import os
-import subprocess
-
-'''
-def check_and_install_modules(modules):
-    """
-    Check if the specified modules are installed and install them if they are not.
-
-    Parameters:
-        modules (list): List of module names as strings.
-    """
-    for module in modules:
-        try:
-            __import__(module)
-            print(f"{module} is already installed.")
-        except ImportError:
-            print(f"{module} is not installed. Installing...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", module])
-            print(f"{module} has been installed.")
-
-
-if __name__ == "__main__":
-    modules_to_check = ["numba", "pandas", "numpy", "streamlit"]
-    check_and_install_modules(modules_to_check)
-'''
-
 import streamlit as st
 from streamlit.web import cli as stcli
 from streamlit import runtime
@@ -380,8 +355,6 @@ class FinancialPlanner():
             """,
             unsafe_allow_html=True
         )
-
-
 # endregion
 
 
