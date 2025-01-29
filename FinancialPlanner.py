@@ -333,8 +333,8 @@ class FinancialPlanner():
                 top: 0;
                 left: 50%;
                 transform: translateX(-50%);
-                width: 60vw;
-                min-width: 600px;
+                width: clamp(50vw, 60vw, 1100px); /* Adapts width dynamically */
+                min-width: 400px;
                 max-width: 1100px;
                 height: 100%;
                 background-color: {center_bar_color};
@@ -347,18 +347,26 @@ class FinancialPlanner():
                 z-index: 1;
             }}
 
+
             /* Adjust width for smaller screens */
-            @media (max-width: 800px) {{
+            @media (max-width: 900px) {{
                 .center-bar {{
-                    width: 80vw;
+                    width: clamp(60vw, 75vw, 800px);
                 }}
             }}
 
-            @media (max-width: 500px) {{
+            @media (max-width: 600px) {{
+                .center-bar {{
+                    width: 90vw;
+                }}
+            }}
+
+            @media (max-width: 400px) {{
                 .center-bar {{
                     width: 100vw;
                 }}
             }}
+            
             </style>
             <div class="center-bar"></div>
             """,
