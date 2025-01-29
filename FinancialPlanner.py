@@ -334,7 +334,7 @@ class FinancialPlanner():
                 left: 50%;
                 transform: translateX(-50%);
                 width: 60vw;
-                min-width: 500px;
+                min-width: 600px;
                 max-width: 1100px;
                 height: 100%;
                 background-color: {center_bar_color};
@@ -350,7 +350,7 @@ class FinancialPlanner():
             /* Adjust width for smaller screens */
             @media (max-width: 800px) {{
                 .center-bar {{
-                    width: 100vw;
+                    width: 80vw;
                 }}
             }}
 
