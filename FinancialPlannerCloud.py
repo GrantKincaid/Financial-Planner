@@ -1,8 +1,4 @@
-import sys
-import os
 import streamlit as st
-from streamlit.web import cli as stcli
-from streamlit import runtime
 from numba import njit, prange
 import numpy as np
 import pandas as pd
@@ -28,7 +24,6 @@ class FinancialPlanner():
         self.real_income_profile = None
         self.risk_profile = None
         self.iterations = 100
-        self.dir_path = os.path.abspath(os.path.dirname("__file__"))
     
         self.page_bg_img = "https://consumerfed.org/wp-content/uploads/2020/07/stock-7-8.jpg"
 
