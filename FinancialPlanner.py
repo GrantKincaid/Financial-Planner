@@ -26,7 +26,7 @@ class FinancialPlanner():
         self.iterations = 200
     
         self.page_bg_img = "https://consumerfed.org/wp-content/uploads/2020/07/stock-7-8.jpg"
-        self.meme_img = "Financial-Planner\\imgs\\meme.jpg"
+        self.meme_img = "https://lapasseduvent.com/wp-content/uploads/2022/08/meme-stonks.jpg"
 
 
 # region Page Layout
