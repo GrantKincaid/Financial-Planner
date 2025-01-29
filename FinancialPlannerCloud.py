@@ -88,7 +88,7 @@ class FinancialPlanner():
             growth_varinance = st.number_input("Expected Income deviation %",
                                                     min_value=1.0,
                                                     step=0.1,
-                                                    value=5.0,
+                                                    value=3.0,
                                                     format="%.1f"
                                                     ) / 100
             
