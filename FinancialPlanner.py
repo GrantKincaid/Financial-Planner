@@ -350,7 +350,7 @@ class FinancialPlanner():
             /* Adjust width for smaller screens */
             @media (max-width: 800px) {{
                 .center-bar {{
-                    width: 80vw;
+                    width: 100vw;
                 }}
             }}
 
