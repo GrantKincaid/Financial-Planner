@@ -46,6 +46,10 @@ class FinancialPlanner():
 
         self.page_simulated_portfolio_expectations()
 
+        # Memory collection
+        # This is a quick solution to a memory leak issue significalty reduced memory ussage and stoped growth
+        del self.__dict__
+        print("self", self.__dict__)
 
     def page_your_information(self):
         mode_options = ["Normal", "Advanced"]
@@ -94,7 +98,7 @@ class FinancialPlanner():
                                                    )
         
         if self.mode == "Advanced":
-            growth_varinance = st.number_input("Expected Income deviation %",
+            self.growth_varinance = st.number_input("Expected Income deviation %",
                                                     min_value=1.0,
                                                     step=0.1,
                                                     value=3.0,
@@ -119,7 +123,7 @@ class FinancialPlanner():
                                                 ) /100
     
         else:
-            growth_varinance = 1.0 / 100
+            self.growth_varinance = 1.0 / 100
             self.target_income_percentile = 50
             self.inflation_deviation = 3.91 /100
             self.inflation_rate = 3.16 / 100
@@ -127,7 +131,7 @@ class FinancialPlanner():
         simulated_profiles = self.generate_income_profiles(self.monthly_income, 
                                                             self.annual_income_growth, 
                                                             self.length_working_life,
-                                                            variance=growth_varinance,
+                                                            variance=self.growth_varinance,
                                                             iterations=self.iterations,
                                                             )
         income_profile = np.percentile(simulated_profiles, self.target_income_percentile, axis=0)
@@ -272,44 +276,43 @@ class FinancialPlanner():
             self.iterations, self.initial_investment
             )
 
-        equity_pct = np.percentile(portfolio_array, 50.0, axis=0)
-        equity_pct = self.annualize_arr_2D(equity_pct, self.length_working_life)
-        equity_pct = pd.DataFrame(equity_pct)
-        equity_pct = equity_pct.rename(columns={0:"Stocks", 1:"Bonds", 2:"Cash"})
+        self.equity_pct = np.percentile(portfolio_array, 50.0, axis=0)
+        self.equity_pct = self.annualize_arr_2D(self.equity_pct, self.length_working_life)
+        self.equity_pct = pd.DataFrame(self.equity_pct)
+        self.equity_pct = self.equity_pct.rename(columns={0:"Stocks", 1:"Bonds", 2:"Cash"})
         st.text("Median Portfolio Make Up")
-        st.line_chart(equity_pct, y_label="USD", x_label="Years", height=500)
+        st.line_chart(self.equity_pct, y_label="USD", x_label="Years", height=500)
 
-        cash_invested = self.after_tax_income_profile * self.investment_rate
-        cum_cash = np.zeros((cash_invested.shape[0], 1), dtype=np.float64)
-        for i in range(cash_invested.shape[0]):
-            cum_cash[i] = cash_invested[i] + cum_cash[i-1]
-        cum_cash_annual = self.annualize_arr_2D(cum_cash, self.length_working_life)
+        self.cash_invested = self.after_tax_income_profile * self.investment_rate
+        self.cum_cash = np.zeros((self.cash_invested.shape[0], 1), dtype=np.float64)
+        for i in range(self.cash_invested.shape[0]):
+            self.cum_cash[i] = self.cash_invested[i] + self.cum_cash[i-1]
 
-        equity_high = np.sum(np.percentile(portfolio_array, 90.0, axis=0), axis=1)
-        equity_mid = np.sum(np.percentile(portfolio_array, 50.0, axis=0), axis=1)
-        equity_low = np.sum(np.percentile(portfolio_array, 10.0, axis=0), axis=1)
-        equity_spread = np.concatenate((equity_high[:, np.newaxis], equity_mid[:, np.newaxis], equity_low[:, np.newaxis], cum_cash), axis=1)
-        Aequity_spread = self.annualize_arr_2D(equity_spread, self.length_working_life)
-        dfequity_spread = pd.DataFrame(Aequity_spread)
-        dfequity_spread = dfequity_spread.rename(columns={0:"90th", 1:"50th", 2:"10th", 3:"Just Cash"})
+        self.equity_high = np.sum(np.percentile(portfolio_array, 90.0, axis=0), axis=1)
+        self.equity_mid = np.sum(np.percentile(portfolio_array, 50.0, axis=0), axis=1)
+        self.equity_low = np.sum(np.percentile(portfolio_array, 10.0, axis=0), axis=1)
+        self.equity_spread = np.concatenate((self.equity_high[:, np.newaxis], self.equity_mid[:, np.newaxis], self.equity_low[:, np.newaxis], self.cum_cash), axis=1)
+        self.Aequity_spread = self.annualize_arr_2D(self.equity_spread, self.length_working_life)
+        self.dfequity_spread = pd.DataFrame(self.Aequity_spread)
+        self.dfequity_spread = self.dfequity_spread.rename(columns={0:"90th", 1:"50th", 2:"10th", 3:"Just Cash"})
 
         st.text("Scenario Outcome Analysis")
-        st.line_chart(dfequity_spread, y_label="USD", x_label="Years", height=500)
+        st.line_chart(self.dfequity_spread, y_label="USD", x_label="Years", height=500)
 
 
         st.text("Scenario Analysis inflation adjusted")
         li_values = [None, None, None, None]
-        for i in range(equity_spread.shape[1]):
-            values = self.generate_real_income_profiles(equity_spread[:, i], self.inflation_rate, self.inflation_deviation, self.iterations)
+        for i in range(self.equity_spread.shape[1]):
+            values = self.generate_real_income_profiles(self.equity_spread[:, i], self.inflation_rate, self.inflation_deviation, self.iterations)
             values = np.percentile(values, self.target_income_percentile, axis=0)
             values = values[:, np.newaxis]
             li_values[i] = values
 
-        inflation_adjusted = np.concatenate((li_values[0], li_values[1], li_values[2], li_values[3]), axis=1)
-        inflation_adjusted = self.annualize_arr_2D(inflation_adjusted, self.length_working_life)
-        pd_inflation_adjusted = pd.DataFrame(inflation_adjusted)
-        pd_inflation_adjusted = pd_inflation_adjusted.rename(columns={0:"90th", 1:"50th", 2:"10th", 3:"Just Cash"})
-        st.line_chart(pd_inflation_adjusted, y_label="USD", x_label="Years", height=500)
+        self.inflation_adjusted = np.concatenate((li_values[0], li_values[1], li_values[2], li_values[3]), axis=1)
+        self.inflation_adjusted = self.annualize_arr_2D(self.inflation_adjusted, self.length_working_life)
+        self.pd_inflation_adjusted = pd.DataFrame(self.inflation_adjusted)
+        self.pd_inflation_adjusted = self.pd_inflation_adjusted.rename(columns={0:"90th", 1:"50th", 2:"10th", 3:"Just Cash"})
+        st.line_chart(self.pd_inflation_adjusted, y_label="USD", x_label="Years", height=500)
 
     def set_custom_background(self, image_url):
         center_bar_color = "#0e1117"
