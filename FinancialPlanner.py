@@ -739,3 +739,5 @@ if __name__ == '__main__':
     fp = FinancialPlanner()
     fp.main()
     
+    # Clean up memory on each pass
+    del fp
