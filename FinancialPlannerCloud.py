@@ -302,7 +302,14 @@ class FinancialPlanner():
         pd_inflation_adjusted = pd_inflation_adjusted.rename(columns={0:"90th", 1:"50th", 2:"10th", 3:"Just Cash"})
         st.line_chart(pd_inflation_adjusted, y_label="USD", x_label="Years", height=500)
 
-    def set_custom_background(self, image_url, center_bar_color="#0e1117"):
+    def set_custom_background(self, image_url):
+        """
+        Apply the theme-based background and center bar color.
+        """
+        # Set center bar color based on detected theme
+
+        center_bar_color = "#0e1117"
+
         st.markdown(
             f"""
             <style>
@@ -319,9 +326,9 @@ class FinancialPlanner():
                 top: 0;
                 left: 50%;
                 transform: translateX(-50%);
-                width: 60vw;  /* Set width to 60% of viewport width */
-                min-width: 500px;  /* Ensure it does not shrink too much */
-                max-width: 1100px; /* Prevent it from becoming too wide */
+                width: 60vw;
+                min-width: 500px;
+                max-width: 1100px;
                 height: 100%;
                 background-color: {center_bar_color};
                 z-index: 0;
@@ -336,13 +343,13 @@ class FinancialPlanner():
             /* Adjust width for smaller screens */
             @media (max-width: 800px) {{
                 .center-bar {{
-                    width: 80vw;  /* Make it wider on small screens */
+                    width: 80vw;
                 }}
             }}
 
             @media (max-width: 500px) {{
                 .center-bar {{
-                    width: 100vw;  /* Full width on very small screens */
+                    width: 100vw;
                 }}
             }}
             </style>
