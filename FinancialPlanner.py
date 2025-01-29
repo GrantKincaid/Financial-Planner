@@ -117,7 +117,7 @@ class FinancialPlanner():
                                 step=0.1
                                 ) /100
             
-            self.inflation_deviation = st.number_input("Percentage Deviation of inflation (Historic 3.91%)",
+            self.inflation_deviation = st.number_input("Percentage Deviation of Inflation (Historic 3.91%)",
                                                 value=3.91,
                                                 step=0.1
                                                 ) /100
@@ -163,7 +163,7 @@ class FinancialPlanner():
                                                value=15.0
                                                ) / 100
         
-        target_cash = st.number_input("Cash \% aprox",
+        target_cash = st.number_input("Cash Approximate \%",
                                       value = 1.0,
                                       min_value = 0.5,
                                       step = 1.0
@@ -193,7 +193,7 @@ class FinancialPlanner():
                                         ) * 12
         
             self.risk_profile = self.sigmoid_decay(starting_risk, self.length_working_life*12, risk_decay, min_risk, decay_shift)
-            st.text("Sigmoidal risk profile of investments by month")
+            st.text("Sigmoidal Risk Profile of Investments by Month")
             st.line_chart(self.risk_profile, y_label="USD", x_label="Years", height=500)
 
         else:
@@ -204,7 +204,7 @@ class FinancialPlanner():
             self.risk_profile = self.sigmoid_decay(starting_risk, self.length_working_life*12, risk_decay, min_risk, decay_shift)
 
         self.porfolio_profile = self.generate_portfolio_profile(target_cash, self.risk_profile, cash_scaling_factor=target_cash)
-        st.text("Portfolio alocation profile over months")
+        st.text("Portfolio Allocation")
         annual_portfolio = self.annualize_arr_2D(self.porfolio_profile, self.length_working_life)
         porfolio_profile = pd.DataFrame(annual_portfolio)
         porfolio_profile = porfolio_profile.rename(columns={0:"Cash", 1:"Stocks", 2:"Bonds"})
@@ -214,7 +214,7 @@ class FinancialPlanner():
     def page_expectations_for_future_returns(self):
             if self.mode == "Advanced":
                 st.header("Expectations for Future Returns")
-                st.text("These values should be your expected geometric returns for each instrument class")
+                st.text("These values should be your expected geometric returns for each asset class")
 
                 self.stock_yield_annual = st.number_input("Stocks Expected Annual Yield (Historic 9.38%)",
                                                 value=9.38,
@@ -230,28 +230,28 @@ class FinancialPlanner():
                                                 step=0.1
                                                 ) /100
                 
-                self.risk_free_rate = st.number_input("Risk Free Rate or yield of cash equivilents (Historic 4.79%)",
+                self.risk_free_rate = st.number_input("Risk Free Rate or Yield of Cash Equivalents (Historic 4.79%)",
                                                 value=4.79,
                                                 min_value=0.1,
                                                 max_value = 10.0,
                                                 step=0.01,
                                                 ) /100
                 
-                self.stock_variance = st.number_input("Expected Stock Deviation % (Historic S&P 500 is 19.15%)",
+                self.stock_variance = st.number_input("Expected Stock Deviation % (Historical S&P 500 is 19.15%)",
                                                 value=19.15,
                                                 min_value=0.01,
                                                 max_value=100.0,
                                                 step=0.01
                                                 ) /100
 
-                self.bond_varince = st.number_input("Expected Bond Deviation % (Historic 8.4%)",
+                self.bond_varince = st.number_input("Expected Bond Deviation % (Historical 8.4%)",
                                             value=8.4,
                                             min_value=0.5,
                                             max_value=100.0,
                                             step=0.1
                                             ) /100
                 
-                self.risk_free_rate_variance = st.number_input("Expected Risk free Rate Deviation % (Historic is 7.89%)",
+                self.risk_free_rate_variance = st.number_input("Expected Risk free Rate Deviation % (Historical is 7.89%)",
                                                 value=7.89,
                                                 min_value=0.5,
                                                 max_value=25.0,
@@ -300,7 +300,7 @@ class FinancialPlanner():
         st.line_chart(self.dfequity_spread, y_label="USD", x_label="Years", height=500)
 
 
-        st.text("Scenario Analysis inflation adjusted")
+        st.text("Scenario Analysis (Inflation-Adjusted)")
         li_values = [None, None, None, None]
         for i in range(self.equity_spread.shape[1]):
             values = self.generate_real_income_profiles(self.equity_spread[:, i], self.inflation_rate, self.inflation_deviation, self.iterations)
