@@ -23,7 +23,7 @@ class FinancialPlanner():
         self.after_tax_income_profile = None
         self.real_income_profile = None
         self.risk_profile = None
-        self.iterations = 100
+        self.iterations = 200
     
         self.page_bg_img = "https://consumerfed.org/wp-content/uploads/2020/07/stock-7-8.jpg"
 
@@ -50,10 +50,10 @@ class FinancialPlanner():
         self.mode = st.selectbox("Mode Selection",options=mode_options, index=0)
         if self.mode == "Advanced":
             self.iterations = st.number_input("Number of simulated outcomes (req 4GB ram per 100k)",
-                                            value=100,
+                                            value=200,
                                             step=100,
-                                            min_value=10,
-                                            max_value=100_000
+                                            min_value=100,
+                                            max_value=10_000
                                             )
         st.header("Your Information")
         st.text("All values are Annual")

@@ -57,7 +57,7 @@ class FinancialPlanner():
             self.iterations = st.number_input("Number of simulated outcomes (req 4GB ram per 100k)",
                                             value=1_000,
                                             step=1_000,
-                                            min_value=10,
+                                            min_value=1_000,
                                             max_value=1_000_000
                                             )
         st.header("Your Information")
