@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 
+'''
 def check_and_install_modules(modules):
     """
     Check if the specified modules are installed and install them if they are not.
@@ -17,10 +18,12 @@ def check_and_install_modules(modules):
             print(f"{module} is not installed. Installing...")
             subprocess.check_call([sys.executable, "-m", "pip", "install", module])
             print(f"{module} has been installed.")
-            
+
+
 if __name__ == "__main__":
     modules_to_check = ["numba", "pandas", "numpy", "streamlit"]
     check_and_install_modules(modules_to_check)
+'''
 
 import streamlit as st
 from streamlit.web import cli as stcli
@@ -28,6 +31,7 @@ from streamlit import runtime
 from numba import njit, prange
 import numpy as np
 import pandas as pd
+
 
 class FinancialPlanner():
     def __init__(self):
@@ -48,26 +52,19 @@ class FinancialPlanner():
         self.after_tax_income_profile = None
         self.real_income_profile = None
         self.risk_profile = None
-        self.iterations = 100_000
+        self.iterations = 1_000
         self.dir_path = os.path.abspath(os.path.dirname("__file__"))
     
-        self.page_bg_img = '''
-        <style>
-        body {
-        background-image: url("https://consumerfed.org/wp-content/uploads/2020/07/stock-7-8.jpg");
-        background-size: cover;
-        }
-        </style>
-        '''
+        self.page_bg_img = "https://consumerfed.org/wp-content/uploads/2020/07/stock-7-8.jpg"
+
 
 # region Page Layout
-
     def main(self):
         st.set_page_config(page_title="RetirmentModel")
+        self.set_custom_background(self.page_bg_img)
         st.title("Financial Planner")
         st.image(image="https://lapasseduvent.com/wp-content/uploads/2022/08/meme-stonks.jpg")
-        st.markdown(self.page_bg_img, unsafe_allow_html=True)
-        
+
         self.page_your_information()
 
         self.page_define_your_investment_profile()
@@ -76,16 +73,17 @@ class FinancialPlanner():
 
         self.page_simulated_portfolio_expectations()
 
+
     def page_your_information(self):
         mode_options = ["Normal", "Advanced"]
             
         self.mode = st.selectbox("Mode Selection",options=mode_options, index=0)
         if self.mode == "Advanced":
-            self.iterations = st.number_input("Number of simulated outcomes",
-                                            value=10_000,
+            self.iterations = st.number_input("Number of simulated outcomes (req 4GB ram per 100k)",
+                                            value=1_000,
                                             step=1_000,
                                             min_value=10,
-                                            max_value=1_000_000     
+                                            max_value=1_000_000
                                             )
         st.header("Your Information")
         st.text("All values are Annual")
@@ -158,7 +156,7 @@ class FinancialPlanner():
         
         self.tax_profile, self.after_tax_income_profile = self.generate_taxed_profiles(self.income_profile, self.selected_state)
 
-        real_income_profiles = self.generate_real_income_profiles(self.after_tax_income_profile.flatten(), self.inflation_rate, self.inflation_deviation)
+        real_income_profiles = self.generate_real_income_profiles(self.after_tax_income_profile.flatten(), self.inflation_rate, self.inflation_deviation, self.iterations)
         self.real_income_profile = np.percentile(real_income_profiles, self.target_income_percentile, axis=0)
         self.real_income_profile = self.real_income_profile[:, np.newaxis]
         
@@ -170,6 +168,7 @@ class FinancialPlanner():
             )
         st.line_chart(joined_profiles, x_label="Years", y_label="USD", height=500)
 
+
     def page_define_your_investment_profile(self):
         st.header("Define Your Investment Profile")
 
@@ -177,14 +176,14 @@ class FinancialPlanner():
         self.investment_rate = st.number_input("Income to Invest %",
                                                min_value=0.0,
                                                max_value=99.0,
-                                               step=0.10,
+                                               step=1.0,
                                                value=15.0
                                                ) / 100
         
         target_cash = st.number_input("Cash \% aprox",
                                       value = 1.0,
                                       min_value = 0.5,
-                                      step = 0.1
+                                      step = 1.0
                                       ) / 100
         
         if self.mode == "Advanced":
@@ -227,6 +226,7 @@ class FinancialPlanner():
         porfolio_profile = pd.DataFrame(annual_portfolio)
         porfolio_profile = porfolio_profile.rename(columns={0:"Cash", 1:"Stocks", 2:"Bonds"})
         st.line_chart(porfolio_profile, y_label="USD", x_label="Years", height=500)
+
 
     def page_expectations_for_future_returns(self):
             if self.mode == "Advanced":
@@ -282,6 +282,7 @@ class FinancialPlanner():
                 self.bond_varince = 8.4 / 100
                 self.risk_free_rate_variance = 7.89 / 100
 
+
     def page_simulated_portfolio_expectations(self):
         st.header("Simulated Portfolio Expectations")
 
@@ -320,7 +321,7 @@ class FinancialPlanner():
         st.text("Scenario Analysis inflation adjusted")
         li_values = [None, None, None, None]
         for i in range(equity_spread.shape[1]):
-            values = self.generate_real_income_profiles(equity_spread[:, i], self.inflation_rate, self.inflation_deviation)
+            values = self.generate_real_income_profiles(equity_spread[:, i], self.inflation_rate, self.inflation_deviation, self.iterations)
             values = np.percentile(values, self.target_income_percentile, axis=0)
             values = values[:, np.newaxis]
             li_values[i] = values
@@ -331,7 +332,58 @@ class FinancialPlanner():
         pd_inflation_adjusted = pd_inflation_adjusted.rename(columns={0:"90th", 1:"50th", 2:"10th", 3:"Just Cash"})
         st.line_chart(pd_inflation_adjusted, y_label="USD", x_label="Years", height=500)
 
+    def set_custom_background(self, image_url, center_bar_color="#0e1117"):
+        st.markdown(
+            f"""
+            <style>
+            /* Background image for the entire app */
+            .stApp {{
+                background: url("{image_url}") no-repeat center center fixed;
+                background-size: cover;
+                position: relative;
+            }}
+
+            /* Center bar with dynamic width */
+            .center-bar {{
+                position: fixed;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 60vw;  /* Set width to 60% of viewport width */
+                min-width: 500px;  /* Ensure it does not shrink too much */
+                max-width: 1100px; /* Prevent it from becoming too wide */
+                height: 100%;
+                background-color: {center_bar_color};
+                z-index: 0;
+            }}
+
+            /* Ensure content is above center bar */
+            .stApp > div {{
+                position: relative;
+                z-index: 1;
+            }}
+
+            /* Adjust width for smaller screens */
+            @media (max-width: 800px) {{
+                .center-bar {{
+                    width: 80vw;  /* Make it wider on small screens */
+                }}
+            }}
+
+            @media (max-width: 500px) {{
+                .center-bar {{
+                    width: 100vw;  /* Full width on very small screens */
+                }}
+            }}
+            </style>
+            <div class="center-bar"></div>
+            """,
+            unsafe_allow_html=True
+        )
+
+
 # endregion
+
 
     @staticmethod
     def generate_portfolio_profile(base_cash_target, risk_profile, cash_scaling_factor=0.1):
@@ -369,6 +421,7 @@ class FinancialPlanner():
 
         return portfolio_profile
 
+
     @staticmethod
     @njit(parallel=True)
     def simulate_portfolio(
@@ -397,9 +450,11 @@ class FinancialPlanner():
         steps = income_profile.shape[0]
 
         # Monthly yields and variances
-        m_stock_yield = stock_yield / 12
-        m_bond_yield = bond_yield / 12
-        m_RFR_yield = RFR / 12
+        n = 12
+        m_stock_yield = ((1 + stock_yield)**(1/n))-1 # converting to monthly percentage rate form EAR
+        m_bond_yield = ((1 + bond_yield)**(1/n))-1
+        m_RFR_yield = ((1 + RFR)**(1/n))-1
+
 
         m_std_stock = np.sqrt(stock_variance) / np.sqrt(12)
         m_std_bond = np.sqrt(bond_variance) / np.sqrt(12)
@@ -443,13 +498,14 @@ class FinancialPlanner():
 
         return simulated_portfolios
 
+
     @staticmethod
     def get_federal_tax(income):
         """Calculate federal tax based on 2023 IRS tax brackets."""
         # 2025 Federal tax brackets (single filer as an example)
         n = 12
         brackets = [
-            (0, 0.10, 11925/12),  # 10% on the first $11,925
+            (0, 0.10, 11925/n),  # 10% on the first $11,925
             (1192/n, 0.12, 48475/n),  # 12% on income over $11,925 up to $48,475
             (48475/n, 0.22, 103350/n),  # 22% on income over $48,475 up to $103,350
             (103350/n, 0.24, 197300/n),  # 24% on income over $103,350 up to $197,300
@@ -467,6 +523,7 @@ class FinancialPlanner():
                 break
         return tax
     
+
     @staticmethod
     def get_state_tax(income, state):
         """Retrieve state tax rates and calculate state tax."""
@@ -530,12 +587,14 @@ class FinancialPlanner():
         state_tax_rate = state_tax_rates[state]
         return income * state_tax_rate
     
+
     def calculate_total_tax(self, income, state):
         """Calculate total tax (federal + state)."""
         federal_tax = self.get_federal_tax(income)
         state_tax = self.get_state_tax(income, state)
         total_tax = federal_tax + state_tax
         return federal_tax, state_tax, total_tax
+
 
     @staticmethod
     @njit
@@ -547,9 +606,7 @@ class FinancialPlanner():
         Returns all simulated profiles for percentile calculation outside the function.
         """
         working_months = len_working * 12
-        growth_monthly = income_growth / 12  # Convert annual growth to monthly
-        #n = 12
-        #growth_monthly = ((growth_monthly)**(1/12) / 12) / n
+        growth_monthly = ((1 + income_growth)**(1/12))-1 # Convert annual (EAR) growth to monthly percentage rate through compuding this will be tured back into EAR
         std_dev_monthly = np.sqrt(variance) / np.sqrt(12)  # Convert annual variance to monthly std dev
 
         # Array to store income profiles for all iterations
@@ -567,6 +624,7 @@ class FinancialPlanner():
 
         return simulated_profiles
 
+
     def generate_taxed_profiles(self, monthly_income_profile, state):
         count_months = monthly_income_profile.shape[0]
         tax_profile = np.zeros((count_months, 1), dtype=np.float64)
@@ -577,6 +635,7 @@ class FinancialPlanner():
             tax_profile[i, 0] = total_tax
             after_tax_income_profile[i, 0] = income - total_tax
         return tax_profile, after_tax_income_profile
+
 
     @staticmethod
     def sigmoid_decay(initial_value, n, steepness, min_value, shift):
@@ -604,9 +663,10 @@ class FinancialPlanner():
         
         return sigmoid_values
 
+
     @staticmethod
     @njit
-    def generate_real_income_profiles(income, inflation_rate, inflation_deviation, iterations=1_000):
+    def generate_real_income_profiles(income, inflation_rate, inflation_deviation, iterations):
         """
         Generate Monte Carlo simulations of real income profiles adjusted for inflation.
         
@@ -625,10 +685,7 @@ class FinancialPlanner():
         # Initialize the result array to store income profiles
         real_income_profiles = np.zeros((iterations, time_steps), dtype=np.float64)
 
-        #inflation_rate = (1 + (inflation_rate/12))**12 / 12
-        inflation_rate = inflation_rate / 12
-        #n = 12
-        #inflation_rate = ((inflation_rate)**(1/12) / 12) / n
+        inflation_rate = ((1 + inflation_rate)**(1/12))-1
         inflation_deviation = np.sqrt(inflation_deviation) / np.sqrt(12)
 
 
@@ -655,6 +712,7 @@ class FinancialPlanner():
 
         return real_income_profiles
 
+
 # region Tools
     @staticmethod
     def annualize_arr_2D(input_arr, count_years):
@@ -668,6 +726,7 @@ class FinancialPlanner():
         else:
             return input_arr
 
+
     @staticmethod
     def annualize_arr_3D(input_arr, count_years):
 
@@ -680,6 +739,7 @@ class FinancialPlanner():
         else:
             return input_arr
 # endregion
+
 
 if __name__ == '__main__':
 
