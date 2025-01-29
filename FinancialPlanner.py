@@ -333,7 +333,7 @@ class FinancialPlanner():
                 top: 0;
                 left: 50%;
                 transform: translateX(-50%);
-                width: clamp(50vw, 60vw, 1100px); /* Adapts width dynamically */
+                width: clamp(60vw, 70vw, 1100px); /* Adapts width dynamically */
                 min-width: 400px;
                 max-width: 1100px;
                 height: 100%;
