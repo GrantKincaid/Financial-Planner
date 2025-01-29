@@ -26,6 +26,7 @@ class FinancialPlanner():
         self.iterations = 200
     
         self.page_bg_img = "https://consumerfed.org/wp-content/uploads/2020/07/stock-7-8.jpg"
+        self.meme_img = "Financial-Planner\\imgs\\meme.jpg"
 
 
 # region Page Layout
@@ -33,7 +34,7 @@ class FinancialPlanner():
         st.set_page_config(page_title="RetirmentModel")
         self.set_custom_background(self.page_bg_img)
         st.title("Financial Planner")
-        st.image(image="https://lapasseduvent.com/wp-content/uploads/2022/08/meme-stonks.jpg")
+        st.image(image=self.meme_img)
 
         self.page_your_information()
 
@@ -64,6 +65,12 @@ class FinancialPlanner():
                                         step=1_000, 
                                         value=45_000
                                         ) / 12
+        
+        self.initial_investment = st.number_input("Initial/Current Investment",
+                                                  min_value=0,
+                                                  step=1_000,
+                                                  value=0,
+                                                  )
         
         # Text box for Expected income growth rate
         self.annual_income_growth = st.number_input("Income Growth Rate %",
@@ -260,7 +267,7 @@ class FinancialPlanner():
             self.after_tax_income_profile, self.porfolio_profile, self.investment_rate,
             self.stock_yield_annual, self.bond_yield_annual, self.risk_free_rate,
             self.stock_variance, self.bond_varince, self.risk_free_rate_variance,
-            self.iterations
+            self.iterations, self.initial_investment
             )
 
         equity_pct = np.percentile(portfolio_array, 50.0, axis=0)
@@ -303,11 +310,6 @@ class FinancialPlanner():
         st.line_chart(pd_inflation_adjusted, y_label="USD", x_label="Years", height=500)
 
     def set_custom_background(self, image_url):
-        """
-        Apply the theme-based background and center bar color.
-        """
-        # Set center bar color based on detected theme
-
         center_bar_color = "#0e1117"
 
         st.markdown(
@@ -403,8 +405,7 @@ class FinancialPlanner():
         income_profile, portfolio_ratios, investment_ratio,
         stock_yield, bond_yield, RFR,
         stock_variance, bond_variance, RFR_variance,
-        iterations
-    ):
+        iterations, initial_investment ):
         """
         Cash Flow based simulation of portfolio
 
@@ -459,7 +460,11 @@ class FinancialPlanner():
 
                 new_investment_funds = income_profile[i] * investment_ratio
                 invested_cash = np.sum(simulated_portfolios[j, i - 1, :]) if i > 0 else 0.0
-                investment_funds = invested_cash + new_investment_funds
+                
+                if i == 0:
+                    investment_funds = invested_cash + new_investment_funds + initial_investment
+                else:
+                    investment_funds = invested_cash + new_investment_funds
 
                 # Add new investment funds based on portfolio ratios
                 stock_ratio = portfolio_ratios[i, 1].item()

@@ -13,3 +13,8 @@ A long term financial planner app.
 ## Check it out @:
 https://financial-planner-7venrasl5ecsj5lckgryrx.streamlit.app/
 
+## Or Run Locally
+* Download the script
+* Install Python 3.12.x
+* Install Pandas, Numpy, Numba, & streamlit
+* run in cmd using "python -m streamlit run >your file path<"
