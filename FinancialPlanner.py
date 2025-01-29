@@ -34,7 +34,6 @@ class FinancialPlanner():
         st.set_page_config(page_title="RetirmentModel")
         self.set_custom_background(self.page_bg_img)
         st.title("Financial Planner")
-        st.text(f"Github https://github.com/GrantKincaid/Financial-Planner")
         # github link
         st.markdown('[Check out the github](https://github.com/GrantKincaid/Financial-Planner)', unsafe_allow_html=True)
         st.image(image=self.meme_img)
