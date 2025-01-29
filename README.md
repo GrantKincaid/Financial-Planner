@@ -11,7 +11,7 @@ A long term financial planner app.
 
 
 ## Check it out @:
-https://financial-planner-7venrasl5ecsj5lckgryrx.streamlit.app/
+https://financial-planner-c8j4rjau3znwffdgh7wpb9.streamlit.app/
 
 ## Or Run Locally
 * Download the script
