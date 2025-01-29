@@ -50,6 +50,15 @@ class FinancialPlanner():
         self.risk_profile = None
         self.iterations = 100_000
         self.dir_path = os.path.abspath(os.path.dirname("__file__"))
+    
+        self.page_bg_img = '''
+        <style>
+        body {
+        background-image: url("https://consumerfed.org/wp-content/uploads/2020/07/stock-7-8.jpg");
+        background-size: cover;
+        }
+        </style>
+        '''
 
 # region Page Layout
 
@@ -57,6 +66,7 @@ class FinancialPlanner():
         st.set_page_config(page_title="RetirmentModel")
         st.title("Financial Planner")
         st.image(image="https://lapasseduvent.com/wp-content/uploads/2022/08/meme-stonks.jpg")
+        st.markdown(self.page_bg_img, unsafe_allow_html=True)
         
         self.page_your_information()
 
@@ -68,7 +78,15 @@ class FinancialPlanner():
 
     def page_your_information(self):
         mode_options = ["Normal", "Advanced"]
+            
         self.mode = st.selectbox("Mode Selection",options=mode_options, index=0)
+        if self.mode == "Advanced":
+            self.iterations = st.number_input("Number of simulated outcomes",
+                                            value=10_000,
+                                            step=1_000,
+                                            min_value=10,
+                                            max_value=1_000_000     
+                                            )
         st.header("Your Information")
         st.text("All values are Annual")
         st.text(f"All Simulations are run {self.iterations} times")
@@ -122,6 +140,7 @@ class FinancialPlanner():
                                                 value=3.91,
                                                 step=0.1
                                                 ) /100
+    
         else:
             growth_varinance = 1.0 / 100
             self.target_income_percentile = 50
@@ -143,9 +162,9 @@ class FinancialPlanner():
         self.real_income_profile = np.percentile(real_income_profiles, self.target_income_percentile, axis=0)
         self.real_income_profile = self.real_income_profile[:, np.newaxis]
         
-        st.text("Income Profile Monthly")
+        st.text("Income Profile")
         annulized_income = self.annualize_arr_2D(np.concatenate((self.income_profile, self.tax_profile, self.after_tax_income_profile, self.real_income_profile), axis=1), self.length_working_life)
-        joined_profiles = pd.DataFrame(annulized_income)
+        joined_profiles = pd.DataFrame(annulized_income * 12)
         joined_profiles = joined_profiles.rename(
             columns={0:"Gross Income", 1:"Taxes Paid", 2:"Income After Taxes", 3:"Real Income"}
             )
@@ -428,14 +447,15 @@ class FinancialPlanner():
     def get_federal_tax(income):
         """Calculate federal tax based on 2023 IRS tax brackets."""
         # 2025 Federal tax brackets (single filer as an example)
+        n = 12
         brackets = [
-            (0, 0.10, 11925),  # 10% on the first $11,925
-            (1192, 0.12, 48475),  # 12% on income over $11,925 up to $48,475
-            (48475, 0.22, 103350),  # 22% on income over $48,475 up to $103,350
-            (103350, 0.24, 197300),  # 24% on income over $103,350 up to $197,300
-            (197300, 0.32, 250525),  # 32% on income over $197,300 up to $250,525
-            (250525, 0.35, 626350),  # 35% on income over $250,525 up to $626,350
-            (626350, 0.37, float("inf")),  # 37% on income over $626,350
+            (0, 0.10, 11925/12),  # 10% on the first $11,925
+            (1192/n, 0.12, 48475/n),  # 12% on income over $11,925 up to $48,475
+            (48475/n, 0.22, 103350/n),  # 22% on income over $48,475 up to $103,350
+            (103350/n, 0.24, 197300/n),  # 24% on income over $103,350 up to $197,300
+            (197300/n, 0.32, 250525/n),  # 32% on income over $197,300 up to $250,525
+            (250525/n, 0.35, 626350/n),  # 35% on income over $250,525 up to $626,350
+            (626350/n, 0.37, float("inf")),  # 37% on income over $626,350
         ]
         
         tax = 0
