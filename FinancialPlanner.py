@@ -56,7 +56,7 @@ class FinancialPlanner():
             
         self.mode = st.selectbox("Mode Selection",options=mode_options, index=0)
         if self.mode == "Advanced":
-            self.iterations = st.number_input("Number of simulated outcomes (req 4GB ram per 100k)",
+            self.iterations = st.number_input("Number of simulated outcomes",
                                             value=200,
                                             step=100,
                                             min_value=100,
