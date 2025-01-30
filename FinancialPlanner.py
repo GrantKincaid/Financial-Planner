@@ -2,6 +2,7 @@ import streamlit as st
 from numba import njit, prange
 import numpy as np
 import pandas as pd
+import gc
 
 
 class FinancialPlanner():
@@ -413,7 +414,7 @@ class FinancialPlanner():
 
 
     @staticmethod
-    @njit(parallel=True)
+    @njit(parallel=False, cache=False)
     def simulate_portfolio(
         income_profile, portfolio_ratios, investment_ratio,
         stock_yield, bond_yield, RFR,
@@ -452,7 +453,7 @@ class FinancialPlanner():
         # Initialize simulated portfolios (iterations x steps x [stocks, bonds, cash])
         simulated_portfolios = np.zeros((iterations, steps, 3), dtype=np.float64)
 
-        for j in prange(iterations):
+        for j in range(iterations):
             for i in range(steps):
                 
                 if i > 0:
@@ -590,7 +591,7 @@ class FinancialPlanner():
 
 
     @staticmethod
-    @njit
+    @njit(cache=False)
     def generate_income_profiles(
         monthly_income, income_growth, len_working, variance, iterations
     ):
@@ -658,7 +659,7 @@ class FinancialPlanner():
 
 
     @staticmethod
-    @njit
+    @njit(cache=False)
     def generate_real_income_profiles(income, inflation_rate, inflation_deviation, iterations):
         """
         Generate Monte Carlo simulations of real income profiles adjusted for inflation.
@@ -741,3 +742,4 @@ if __name__ == '__main__':
     
     # Clean up memory on each pass
     del fp
+    gc.collect()
