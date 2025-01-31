@@ -381,7 +381,7 @@ class FinancialPlanner():
     @staticmethod
     @njit(cache=False)
     def generate_income_profiles(
-        monthly_income, income_growth, len_working, variance, iterations
+        annual_income, income_growth, len_working, variance, iterations
     ):
         """
         Generate multiple income profiles using Monte Carlo simulation.
@@ -397,7 +397,7 @@ class FinancialPlanner():
         # Monte Carlo simulation
         for it in range(iterations):
             income_profile = np.zeros(working_months, dtype=np.float64)
-            income_profile[0] = monthly_income
+            income_profile[0] = annual_income
             for i in range(1, working_months):
                 # Add random fluctuation based on monthly standard deviation
                 random_fluctuation = np.random.normal(0, std_dev_monthly)
