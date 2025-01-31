@@ -32,13 +32,17 @@ class FinancialPlanner():
 
 # region Page Layout
     def main(self):
+        """
+        setting up page config and calls to parts of the page
+        """
         st.set_page_config(page_title="RetirmentModel")
-        self.set_custom_background(self.page_bg_img)
+        self.set_custom_background(self.page_bg_img) # CSS for background image
         st.title("Financial Planner")
         # github link
         st.markdown('[Check out the github](https://github.com/GrantKincaid/Financial-Planner)', unsafe_allow_html=True)
         st.image(image=self.meme_img)
 
+        # Primary Page rendering methods defined by section
         self.page_your_information()
 
         self.page_define_your_investment_profile()
@@ -48,16 +52,22 @@ class FinancialPlanner():
         self.page_simulated_portfolio_expectations()
 
         # Memory collection
-        # This is a quick solution to a memory leak issue significalty reduced memory ussage and stoped growth
+        # This is a quick solution to a memory leak issue significalty reduced memory ussage and stoped mem growth
         del self.__dict__
         print("self", self.__dict__)
 
 
     def page_your_information(self):
-        mode_options = ["Normal", "Advanced"]
+        """
+        General information for the user to enter about personal finaces and future expections
+        """
             
+        # Drop down for selection of Normal or Advanced mode
+        mode_options = ["Normal", "Advanced"]
         self.mode = st.selectbox("Mode Selection",options=mode_options, index=0)
+
         if self.mode == "Advanced":
+            # Number box for number of iterations to run
             self.iterations = st.number_input("Number of simulated outcomes",
                                             value=200,
                                             step=100,
@@ -67,20 +77,22 @@ class FinancialPlanner():
         st.header("Your Information")
         st.text("All values are Annual")
         st.text(f"All Simulations are run {self.iterations} times")
-        # Text Box for monthly income
+
+        # Number box for monthly income
         self.monthly_income = st.number_input("Gross Yearly Income", 
                                         min_value=0, 
                                         step=1_000, 
                                         value=45_000
                                         ) / 12
         
+        # Number Box for Stating investment
         self.initial_investment = st.number_input("Initial/Current Investment",
                                                   min_value=0,
                                                   step=1_000,
                                                   value=0,
                                                   )
         
-        # Text box for Expected income growth rate
+        # Number box for Expected income growth rate
         self.annual_income_growth = st.number_input("Income Growth Rate %",
                                                     min_value=-100.0,
                                                     max_value=1_000.0,
@@ -88,10 +100,10 @@ class FinancialPlanner():
                                                     value=5.0,
                                                     ) / 100
 
-        # Create a dropdown (select box) for states
+        # Dropdown (select box) for states
         self.selected_state = st.selectbox("State of Residence:", self.states)
         
-        # Text box for Expected working life
+        # Number box for Expected working life
         self.length_working_life = st.number_input("Years Working",
                                                    min_value=2,
                                                    max_value=60,
@@ -100,6 +112,8 @@ class FinancialPlanner():
                                                    )
         
         if self.mode == "Advanced":
+
+            # Number box for Percentage Devaition in income growth
             self.growth_varinance = st.number_input("Expected Income deviation %",
                                                     min_value=1.0,
                                                     step=0.1,
@@ -107,6 +121,7 @@ class FinancialPlanner():
                                                     format="%.1f"
                                                     ) / 100
             
+            # Number box for Percentile to select form simulation
             self.target_income_percentile = st.number_input("Percentile outcome to select",
                                                             min_value=0.0,
                                                             max_value=100.0,
@@ -114,39 +129,62 @@ class FinancialPlanner():
                                                             value=50.0
                                                             )
             
+            # Number box defines expected inflation rate
             self.inflation_rate = st.number_input("Inflation Rate (Historic 3.16%)",
                                 value=3.16,
                                 step=0.1
                                 ) /100
             
+            # Number box defines expected percentage deviation of inflation
             self.inflation_deviation = st.number_input("Percentage Deviation of Inflation (Historic 3.91%)",
                                                 value=3.91,
                                                 step=0.1
                                                 ) /100
     
         else:
+            # Normal mode prebaked variables
             self.growth_varinance = 1.0 / 100
             self.target_income_percentile = 50
             self.inflation_deviation = 3.91 /100
             self.inflation_rate = 3.16 / 100
 
+        # Simulate the future income of user
         simulated_profiles = self.generate_income_profiles(self.monthly_income, 
                                                             self.annual_income_growth, 
                                                             self.length_working_life,
                                                             variance=self.growth_varinance,
                                                             iterations=self.iterations,
                                                             )
+        # Select the targeted percentile
         income_profile = np.percentile(simulated_profiles, self.target_income_percentile, axis=0)
-        self.income_profile = income_profile[:, np.newaxis]
+        self.income_profile = income_profile[:, np.newaxis] # Convert to 2D for concat compatability
         
-        self.tax_profile, self.after_tax_income_profile = self.generate_taxed_profiles(self.income_profile, self.selected_state)
+        # Generate the tax array
+        self.tax_profile, self.after_tax_income_profile = self.generate_taxed_profiles(
+                                                                self.income_profile, 
+                                                                self.selected_state
+                                                                )
 
-        real_income_profiles = self.generate_real_income_profiles(self.after_tax_income_profile.flatten(), self.inflation_rate, self.inflation_deviation, self.iterations)
+        # Simulate inflation rate effect on income
+        real_income_profiles = self.generate_real_income_profiles(
+                                        self.after_tax_income_profile.flatten(), 
+                                        self.inflation_rate, 
+                                        self.inflation_deviation, 
+                                        self.iterations)
+        # Select the targeted percentile of simulate real income
         self.real_income_profile = np.percentile(real_income_profiles, self.target_income_percentile, axis=0)
-        self.real_income_profile = self.real_income_profile[:, np.newaxis]
-        
+        self.real_income_profile = self.real_income_profile[:, np.newaxis] # Convert to 2D for concat compatability
+
+        # Graph all income profiles
         st.text("Income Profile")
-        annulized_income = self.annualize_arr_2D(np.concatenate((self.income_profile, self.tax_profile, self.after_tax_income_profile, self.real_income_profile), axis=1), self.length_working_life)
+        annulized_income = self.annualize_arr_2D(np.concatenate((
+                                                    self.income_profile, 
+                                                    self.tax_profile, 
+                                                    self.after_tax_income_profile, 
+                                                    self.real_income_profile
+                                                ), axis=1), self.length_working_life
+                                                )
+        # change array to Dataframe so elements can be labled
         joined_profiles = pd.DataFrame(annulized_income * 12)
         joined_profiles = joined_profiles.rename(
             columns={0:"Gross Income", 1:"Taxes Paid", 2:"Income After Taxes", 3:"Real Income"}
@@ -157,55 +195,85 @@ class FinancialPlanner():
     def page_define_your_investment_profile(self):
         st.header("Define Your Investment Profile")
 
-        # Percentage of income invested
+        # Number box for Percentage of income to invest
         self.investment_rate = st.number_input("Income to Invest %",
                                                min_value=0.0,
                                                max_value=99.0,
                                                step=1.0,
                                                value=15.0
-                                               ) / 100
+                                            ) / 100
         
+        # Number box for aproxiamte cash to or cash equivilents to keep in protfolio
         target_cash = st.number_input("Cash Approximate \%",
                                       value = 1.0,
                                       min_value = 0.5,
                                       step = 1.0
-                                      ) / 100
+                                    ) / 100
         
         if self.mode == "Advanced":
             st.text("These inputs are to define the way your portfolio will adjust over time")
+
+            # Number box for aproximate max ratio of stocks in portfolio
             starting_risk = st.number_input("Initial Stocks",
                                             value=90.0,
                                             max_value=100.0,
                                             min_value=1.0,
                                             step=0.5
-                                            ) / 100
+                                        ) / 100
+            
+            # Number box with aproximate min ratio of stocks in portfolio
             min_risk = st.number_input("Minimum Stocks",
                                     value=10.0,
                                     max_value=100.0,
                                     min_value=0.0,
                                     step=0.5
-                                    )/100
+                                ) / 100
+            
+            # Number box defines slope of the sigmoid
             risk_decay = st.number_input("Stock decay",
                                         value=7.0,
                                         step=0.5
-                                        )
+                                    )
+            
+            # Number box defines the X-axis shift of the sigmoid in years
             decay_shift = st.number_input("Time Shift",
                                         value=10,
                                         step=1
-                                        ) * 12
-        
-            self.risk_profile = self.sigmoid_decay(starting_risk, self.length_working_life*12, risk_decay, min_risk, decay_shift)
+                                    ) * 12
+
+            # Calculate and graph sigmoid
+            self.risk_profile = self.sigmoid_decay(
+                                        starting_risk, 
+                                        self.length_working_life*12, 
+                                        risk_decay, 
+                                        min_risk, 
+                                        decay_shift
+                                    )
             st.text("Sigmoidal Risk Profile of Investments by Month")
             st.line_chart(self.risk_profile, y_label="USD", x_label="Years", height=500)
 
         else:
+            # Prebaked values for the risk profile
             starting_risk = 90.0 / 100
             min_risk = 10.0 / 100
             risk_decay = 5
             decay_shift = 128
-            self.risk_profile = self.sigmoid_decay(starting_risk, self.length_working_life*12, risk_decay, min_risk, decay_shift)
+            # Calculate only sigmoid (no graph)
+            self.risk_profile = self.sigmoid_decay(
+                                        starting_risk, 
+                                        self.length_working_life*12, 
+                                        risk_decay, 
+                                        min_risk, 
+                                        decay_shift
+                                    )
 
-        self.porfolio_profile = self.generate_portfolio_profile(target_cash, self.risk_profile, cash_scaling_factor=target_cash)
+        # Creates 2D array of portolfio over time cols=[cash, stocks, bonds]
+        self.porfolio_profile = self.generate_portfolio_profile(
+                                            target_cash, 
+                                            self.risk_profile, 
+                                            cash_scaling_factor=target_cash
+                                        )
+        # Graph the portfolios asset alocation of time
         st.text("Portfolio Allocation")
         annual_portfolio = self.annualize_arr_2D(self.porfolio_profile, self.length_working_life)
         porfolio_profile = pd.DataFrame(annual_portfolio)
@@ -223,34 +291,34 @@ class FinancialPlanner():
                                                 min_value=1.0,
                                                 max_value=100.0,
                                                 step=0.01
-                                                ) /100
+                                            ) /100
                     
                 self.bond_yield_annual = st.number_input("Bonds Excpected Annual Yield (Historic 5.9%)",
                                                 value=5.90,
                                                 min_value=0.5,
                                                 max_value=25.0,
                                                 step=0.1
-                                                ) /100
+                                            ) /100
                 
                 self.risk_free_rate = st.number_input("Risk Free Rate or Yield of Cash Equivalents (Historic 4.79%)",
                                                 value=4.79,
                                                 min_value=0.1,
                                                 max_value = 10.0,
                                                 step=0.01,
-                                                ) /100
+                                            ) /100
                 
                 self.stock_variance = st.number_input("Expected Stock Deviation % (Historical S&P 500 is 19.15%)",
                                                 value=19.15,
                                                 min_value=0.01,
                                                 max_value=100.0,
                                                 step=0.01
-                                                ) /100
+                                            ) /100
 
                 self.bond_varince = st.number_input("Expected Bond Deviation % (Historical 8.4%)",
-                                            value=8.4,
-                                            min_value=0.5,
-                                            max_value=100.0,
-                                            step=0.1
+                                                value=8.4,
+                                                min_value=0.5,
+                                                max_value=100.0,
+                                                step=0.1
                                             ) /100
                 
                 self.risk_free_rate_variance = st.number_input("Expected Risk free Rate Deviation % (Historical is 7.89%)",
@@ -258,8 +326,9 @@ class FinancialPlanner():
                                                 min_value=0.5,
                                                 max_value=25.0,
                                                 step=0.01
-                                                ) /100
+                                            ) /100
             else:
+                # Pre baked values for growth and variance in Normal Mode
                 self.stock_yield_annual = 9.38 / 100
                 self.bond_yield_annual = 5.90 / 100
                 self.risk_free_rate = 4.79 / 100
@@ -271,37 +340,39 @@ class FinancialPlanner():
     def page_simulated_portfolio_expectations(self):
         st.header("Simulated Portfolio Expectations")
 
+        # Simualte Protoflio performace
         portfolio_array = self.simulate_portfolio(
             self.after_tax_income_profile, self.porfolio_profile, self.investment_rate,
             self.stock_yield_annual, self.bond_yield_annual, self.risk_free_rate,
             self.stock_variance, self.bond_varince, self.risk_free_rate_variance,
             self.iterations, self.initial_investment
             )
-
+        # Extract the 50th percentile for the real portfolio allocation chart
         self.equity_pct = np.percentile(portfolio_array, 50.0, axis=0)
         self.equity_pct = self.annualize_arr_2D(self.equity_pct, self.length_working_life)
-        self.equity_pct = pd.DataFrame(self.equity_pct)
+        self.equity_pct = pd.DataFrame(self.equity_pct) # Convert to DataFrame to Add chart lables
         self.equity_pct = self.equity_pct.rename(columns={0:"Stocks", 1:"Bonds", 2:"Cash"})
         st.text("Median Portfolio Make Up")
         st.line_chart(self.equity_pct, y_label="USD", x_label="Years", height=500)
 
+        # Generate the cash only line
         self.cash_invested = self.after_tax_income_profile * self.investment_rate
         self.cum_cash = np.zeros((self.cash_invested.shape[0], 1), dtype=np.float64)
         for i in range(self.cash_invested.shape[0]):
             self.cum_cash[i] = self.cash_invested[i] + self.cum_cash[i-1]
-
+        # Extract the 90th 50th 10th percentile of simulations
         self.equity_high = np.sum(np.percentile(portfolio_array, 90.0, axis=0), axis=1)
         self.equity_mid = np.sum(np.percentile(portfolio_array, 50.0, axis=0), axis=1)
         self.equity_low = np.sum(np.percentile(portfolio_array, 10.0, axis=0), axis=1)
         self.equity_spread = np.concatenate((self.equity_high[:, np.newaxis], self.equity_mid[:, np.newaxis], self.equity_low[:, np.newaxis], self.cum_cash), axis=1)
         self.Aequity_spread = self.annualize_arr_2D(self.equity_spread, self.length_working_life)
-        self.dfequity_spread = pd.DataFrame(self.Aequity_spread)
+        self.dfequity_spread = pd.DataFrame(self.Aequity_spread) # Convert to DataFrame to Add chart lables
         self.dfequity_spread = self.dfequity_spread.rename(columns={0:"90th", 1:"50th", 2:"10th", 3:"Just Cash"})
-
+        # Graph raw simulation
         st.text("Scenario Outcome Analysis")
         st.line_chart(self.dfequity_spread, y_label="USD", x_label="Years", height=500)
 
-
+        # Calculate inflation adjusted results
         st.text("Scenario Analysis (Inflation-Adjusted)")
         li_values = [None, None, None, None]
         for i in range(self.equity_spread.shape[1]):
@@ -309,7 +380,7 @@ class FinancialPlanner():
             values = np.percentile(values, self.target_income_percentile, axis=0)
             values = values[:, np.newaxis]
             li_values[i] = values
-
+        # Graph inflation adjusted results
         self.inflation_adjusted = np.concatenate((li_values[0], li_values[1], li_values[2], li_values[3]), axis=1)
         self.inflation_adjusted = self.annualize_arr_2D(self.inflation_adjusted, self.length_working_life)
         self.pd_inflation_adjusted = pd.DataFrame(self.inflation_adjusted)
@@ -318,6 +389,9 @@ class FinancialPlanner():
 
 
     def set_custom_background(self, image_url):
+        """
+        CSS for background image using streamlit
+        """
         center_bar_color = "#0e1117"
 
         st.markdown(
@@ -379,23 +453,32 @@ class FinancialPlanner():
 
 # region Profiles
     @staticmethod
-    @njit(cache=False)
+    @njit(parallel=True, cache=False)
     def generate_income_profiles(
         annual_income, income_growth, len_working, variance, iterations
     ):
         """
         Generate multiple income profiles using Monte Carlo simulation.
         Returns all simulated profiles for percentile calculation outside the function.
+
+        Args:
+            annual_income (int): starting annual income of user
+            income_growth (float): expected annual growth of income
+            len_working (int): expected years working
+            variance (float): percentage expected varince in annual income
+            iterations (int): number of simulations to run
+        Retrun:
+            np.ndarray: 2D numpy array of simulation results
         """
         working_months = len_working * 12
-        growth_monthly = ((1 + income_growth)**(1/12))-1 # Convert annual (EAR) growth to monthly percentage rate through compuding this will be tured back into EAR
+        growth_monthly = ((1 + income_growth)**(1/12))-1 # Convert annual (EAR) growth to monthly percentage rate through compunding this will be tured back into EAR
         std_dev_monthly = np.sqrt(variance) / np.sqrt(12)  # Convert annual variance to monthly std dev
 
         # Array to store income profiles for all iterations
         simulated_profiles = np.zeros((iterations, working_months), dtype=np.float64)
 
         # Monte Carlo simulation
-        for it in range(iterations):
+        for it in prange(iterations):
             income_profile = np.zeros(working_months, dtype=np.float64)
             income_profile[0] = annual_income
             for i in range(1, working_months):
@@ -408,6 +491,16 @@ class FinancialPlanner():
 
 
     def generate_taxed_profiles(self, monthly_income_profile, state):
+        """
+        loop funtion to create a numpy array of expected tax cost
+
+        Args:
+            monthly_income_profile (np.ndarray): 1D array of income
+            state (str): state of desired tax rate
+        Returns:
+            np.ndarray : taxes paid at each time step
+            np.ndarray : income after taxes at each time step
+        """
         count_months = monthly_income_profile.shape[0]
         tax_profile = np.zeros((count_months, 1), dtype=np.float64)
         after_tax_income_profile = np.zeros((count_months, 1), dtype=np.float64)
@@ -420,7 +513,7 @@ class FinancialPlanner():
 
 
     @staticmethod
-    @njit(cache=False)
+    @njit(parallel=True, cache=False)
     def generate_real_income_profiles(income, inflation_rate, inflation_deviation, iterations):
         """
         Generate Monte Carlo simulations of real income profiles adjusted for inflation.
@@ -445,7 +538,7 @@ class FinancialPlanner():
 
 
         # Monte Carlo simulation
-        for it in range(iterations):
+        for it in prange(iterations):
             real_income = np.zeros(time_steps, dtype=np.float64)
             real_income[0] = income[0]
             
@@ -533,7 +626,7 @@ class FinancialPlanner():
 
 
     @staticmethod
-    @njit(parallel=False, cache=False)
+    @njit(parallel=True, cache=False)
     def simulate_portfolio(
         income_profile, portfolio_ratios, investment_ratio,
         stock_yield, bond_yield, RFR,
@@ -712,7 +805,9 @@ class FinancialPlanner():
 
     @staticmethod
     def annualize_arr_2D(input_arr, count_years):
-
+        """
+        Annulize 2D monthly array by sampling with a factor of 12
+        """
         if input_arr.shape[0] % 12 == 0:
             annulized_data = np.zeros((count_years, input_arr.shape[1]), dtype=np.float64)
             for i in range(count_years):
@@ -725,7 +820,9 @@ class FinancialPlanner():
 
     @staticmethod
     def annualize_arr_3D(input_arr, count_years):
-
+        """
+        Annulize 3D monthly array by sampling with factor of 12
+        """
         if input_arr.shape[0] % 12 == 0: 
             annulized_data = np.zeros((count_years, input_arr.shape[1], input_arr.shape[2]), dtype=np.float64)
             for i in range(count_years):
