@@ -52,6 +52,7 @@ class FinancialPlanner():
         del self.__dict__
         print("self", self.__dict__)
 
+
     def page_your_information(self):
         mode_options = ["Normal", "Advanced"]
             
@@ -315,6 +316,7 @@ class FinancialPlanner():
         self.pd_inflation_adjusted = self.pd_inflation_adjusted.rename(columns={0:"90th", 1:"50th", 2:"10th", 3:"Just Cash"})
         st.line_chart(self.pd_inflation_adjusted, y_label="USD", x_label="Years", height=500)
 
+
     def set_custom_background(self, image_url):
         center_bar_color = "#0e1117"
 
@@ -374,6 +376,123 @@ class FinancialPlanner():
             unsafe_allow_html=True
         )
 # endregion
+
+# region Profiles
+    @staticmethod
+    @njit(cache=False)
+    def generate_income_profiles(
+        monthly_income, income_growth, len_working, variance, iterations
+    ):
+        """
+        Generate multiple income profiles using Monte Carlo simulation.
+        Returns all simulated profiles for percentile calculation outside the function.
+        """
+        working_months = len_working * 12
+        growth_monthly = ((1 + income_growth)**(1/12))-1 # Convert annual (EAR) growth to monthly percentage rate through compuding this will be tured back into EAR
+        std_dev_monthly = np.sqrt(variance) / np.sqrt(12)  # Convert annual variance to monthly std dev
+
+        # Array to store income profiles for all iterations
+        simulated_profiles = np.zeros((iterations, working_months), dtype=np.float64)
+
+        # Monte Carlo simulation
+        for it in range(iterations):
+            income_profile = np.zeros(working_months, dtype=np.float64)
+            income_profile[0] = monthly_income
+            for i in range(1, working_months):
+                # Add random fluctuation based on monthly standard deviation
+                random_fluctuation = np.random.normal(0, std_dev_monthly)
+                income_profile[i] = income_profile[i - 1] * (1 + growth_monthly + random_fluctuation)
+            simulated_profiles[it, :] = income_profile
+
+        return simulated_profiles
+
+
+    def generate_taxed_profiles(self, monthly_income_profile, state):
+        count_months = monthly_income_profile.shape[0]
+        tax_profile = np.zeros((count_months, 1), dtype=np.float64)
+        after_tax_income_profile = np.zeros((count_months, 1), dtype=np.float64)
+        for i in range(0, count_months, 1):
+            income = monthly_income_profile[i]
+            fed_tax, state_tax, total_tax = self.calculate_total_tax(income=income, state=state)
+            tax_profile[i, 0] = total_tax
+            after_tax_income_profile[i, 0] = income - total_tax
+        return tax_profile, after_tax_income_profile
+
+
+    @staticmethod
+    @njit(cache=False)
+    def generate_real_income_profiles(income, inflation_rate, inflation_deviation, iterations):
+        """
+        Generate Monte Carlo simulations of real income profiles adjusted for inflation.
+        
+        Args:
+            income (np.ndarray): 1D array of initial income values (length equal to `length`).
+            inflation_rate (float): Average annual inflation rate (as a decimal).
+            inflation_deviation (float): Standard deviation of annual inflation rate (as a decimal).
+            iterations (int): Number of Monte Carlo iterations.
+        
+        Returns:
+            np.ndarray: 2D array of shape (iterations, length), with each row representing a simulated income profile.
+        """
+        # Precompute the number of time steps (assuming income is provided for each year)
+        time_steps = len(income)
+
+        # Initialize the result array to store income profiles
+        real_income_profiles = np.zeros((iterations, time_steps), dtype=np.float64)
+
+        inflation_rate = ((1 + inflation_rate)**(1/12))-1
+        inflation_deviation = np.sqrt(inflation_deviation) / np.sqrt(12)
+
+
+        # Monte Carlo simulation
+        for it in range(iterations):
+            real_income = np.zeros(time_steps, dtype=np.float64)
+            real_income[0] = income[0]
+            
+            # Start cumulative inflation factor
+            inflation_factor = 1.0
+
+            for t in range(1, time_steps):
+                # Generate a random inflation rate for this year
+                random_inflation = np.random.normal(inflation_rate, inflation_deviation)
+
+                # Update the cumulative inflation factor (compounding effect)
+                inflation_factor *= 1 + random_inflation
+
+                # Adjust income based on the cumulative inflation factor
+                real_income[t] = income[t] / inflation_factor
+
+            # Store the simulated profile
+            real_income_profiles[it, :] = real_income
+
+        return real_income_profiles
+
+    
+    @staticmethod
+    def sigmoid_decay(initial_value, n, steepness, min_value, shift):
+        """
+        Generates a sigmoid curve that starts from an initial value and approaches a minimum value over n time steps.
+        
+        Args:
+            initial_value (float): Starting value of the sigmoid.
+            n (int): Total number of time steps.
+            steepness (float): Controls the steepness of the sigmoid curve.
+            min_value (float): The minimum value the sigmoid will approach.
+            shift (float): Shifts the sigmoid curve to the right (positive) or left (negative).
+        
+        Returns:
+            np.ndarray: A numpy array of length n containing the sigmoid values.
+        """
+        # Generate time steps
+        time_steps = np.arange(n)
+        
+        # Calculate normalized sigmoid values (range: 0 to 1)
+        normalized_sigmoid = initial_value / (1 + np.exp(steepness * (time_steps - n / 2 - shift) / n))
+        
+        # Scale to desired range [min_value, initial_value]
+        sigmoid_values = min_value + (initial_value - min_value) * normalized_sigmoid
+        
+        return sigmoid_values
 
 
     @staticmethod
@@ -453,7 +572,7 @@ class FinancialPlanner():
         # Initialize simulated portfolios (iterations x steps x [stocks, bonds, cash])
         simulated_portfolios = np.zeros((iterations, steps, 3), dtype=np.float64)
 
-        for j in range(iterations):
+        for j in prange(iterations):
             for i in range(steps):
                 
                 if i > 0:
@@ -491,8 +610,9 @@ class FinancialPlanner():
                 simulated_portfolios[j, i, 2] = np.float64(investment_funds[0] * cash_ratio)
 
         return simulated_portfolios
+# endregion
 
-
+# region Tools
     @staticmethod
     def get_federal_tax(income):
         """Calculate federal tax based on 2023 IRS tax brackets."""
@@ -590,124 +710,6 @@ class FinancialPlanner():
         return federal_tax, state_tax, total_tax
 
 
-    @staticmethod
-    @njit(cache=False)
-    def generate_income_profiles(
-        monthly_income, income_growth, len_working, variance, iterations
-    ):
-        """
-        Generate multiple income profiles using Monte Carlo simulation.
-        Returns all simulated profiles for percentile calculation outside the function.
-        """
-        working_months = len_working * 12
-        growth_monthly = ((1 + income_growth)**(1/12))-1 # Convert annual (EAR) growth to monthly percentage rate through compuding this will be tured back into EAR
-        std_dev_monthly = np.sqrt(variance) / np.sqrt(12)  # Convert annual variance to monthly std dev
-
-        # Array to store income profiles for all iterations
-        simulated_profiles = np.zeros((iterations, working_months), dtype=np.float64)
-
-        # Monte Carlo simulation
-        for it in range(iterations):
-            income_profile = np.zeros(working_months, dtype=np.float64)
-            income_profile[0] = monthly_income
-            for i in range(1, working_months):
-                # Add random fluctuation based on monthly standard deviation
-                random_fluctuation = np.random.normal(0, std_dev_monthly)
-                income_profile[i] = income_profile[i - 1] * (1 + growth_monthly + random_fluctuation)
-            simulated_profiles[it, :] = income_profile
-
-        return simulated_profiles
-
-
-    def generate_taxed_profiles(self, monthly_income_profile, state):
-        count_months = monthly_income_profile.shape[0]
-        tax_profile = np.zeros((count_months, 1), dtype=np.float64)
-        after_tax_income_profile = np.zeros((count_months, 1), dtype=np.float64)
-        for i in range(0, count_months, 1):
-            income = monthly_income_profile[i]
-            fed_tax, state_tax, total_tax = self.calculate_total_tax(income=income, state=state)
-            tax_profile[i, 0] = total_tax
-            after_tax_income_profile[i, 0] = income - total_tax
-        return tax_profile, after_tax_income_profile
-
-
-    @staticmethod
-    def sigmoid_decay(initial_value, n, steepness, min_value, shift):
-        """
-        Generates a sigmoid curve that starts from an initial value and approaches a minimum value over n time steps.
-        
-        Args:
-            initial_value (float): Starting value of the sigmoid.
-            n (int): Total number of time steps.
-            steepness (float): Controls the steepness of the sigmoid curve.
-            min_value (float): The minimum value the sigmoid will approach.
-            shift (float): Shifts the sigmoid curve to the right (positive) or left (negative).
-        
-        Returns:
-            np.ndarray: A numpy array of length n containing the sigmoid values.
-        """
-        # Generate time steps
-        time_steps = np.arange(n)
-        
-        # Calculate normalized sigmoid values (range: 0 to 1)
-        normalized_sigmoid = initial_value / (1 + np.exp(steepness * (time_steps - n / 2 - shift) / n))
-        
-        # Scale to desired range [min_value, initial_value]
-        sigmoid_values = min_value + (initial_value - min_value) * normalized_sigmoid
-        
-        return sigmoid_values
-
-
-    @staticmethod
-    @njit(cache=False)
-    def generate_real_income_profiles(income, inflation_rate, inflation_deviation, iterations):
-        """
-        Generate Monte Carlo simulations of real income profiles adjusted for inflation.
-        
-        Args:
-            income (np.ndarray): 1D array of initial income values (length equal to `length`).
-            inflation_rate (float): Average annual inflation rate (as a decimal).
-            inflation_deviation (float): Standard deviation of annual inflation rate (as a decimal).
-            iterations (int): Number of Monte Carlo iterations.
-        
-        Returns:
-            np.ndarray: 2D array of shape (iterations, length), with each row representing a simulated income profile.
-        """
-        # Precompute the number of time steps (assuming income is provided for each year)
-        time_steps = len(income)
-
-        # Initialize the result array to store income profiles
-        real_income_profiles = np.zeros((iterations, time_steps), dtype=np.float64)
-
-        inflation_rate = ((1 + inflation_rate)**(1/12))-1
-        inflation_deviation = np.sqrt(inflation_deviation) / np.sqrt(12)
-
-
-        # Monte Carlo simulation
-        for it in range(iterations):
-            real_income = np.zeros(time_steps, dtype=np.float64)
-            real_income[0] = income[0]
-            
-            # Start cumulative inflation factor
-            inflation_factor = 1.0
-
-            for t in range(1, time_steps):
-                # Generate a random inflation rate for this year
-                random_inflation = np.random.normal(inflation_rate, inflation_deviation)
-
-                # Update the cumulative inflation factor (compounding effect)
-                inflation_factor *= 1 + random_inflation
-
-                # Adjust income based on the cumulative inflation factor
-                real_income[t] = income[t] / inflation_factor
-
-            # Store the simulated profile
-            real_income_profiles[it, :] = real_income
-
-        return real_income_profiles
-
-
-# region Tools
     @staticmethod
     def annualize_arr_2D(input_arr, count_years):
 
